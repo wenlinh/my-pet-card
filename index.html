@@ -6,114 +6,176 @@
     <title>Suisa 寵物雲端健康卡</title>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <style>
-        :root { --primary: #00b900; --bg: #f4f7f6; --text: #333; }
+        :root { --primary: #00b900; --bg: #f4f7f6; --text: #333; --accent: #f39c12; }
         body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; }
         .card { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); margin-bottom: 20px; }
-        .pet-header { background: linear-gradient(135deg, #00b900 0%, #009900 100%); color: white; }
-        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.9rem; margin-top: 10px; }
-        h3 { border-left: 5px solid var(--primary); padding-left: 10px; font-size: 1.1rem; margin-top: 0; }
+        
+        /* 頂部基本資訊樣式 */
+        .pet-header { background: linear-gradient(135deg, #00b900 0%, #008a00 100%); color: white; border: none; }
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.9rem; margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 10px; }
+        .info-item b { opacity: 0.8; font-size: 0.75rem; display: block; }
+        
+        h3 { border-left: 5px solid var(--primary); padding-left: 10px; font-size: 1.1rem; margin: 0 0 15px 0; }
         label { display: block; margin-top: 12px; font-weight: bold; font-size: 0.85rem; color: #666; }
-        input, textarea { width: 100%; padding: 12px; margin-top: 5px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
-        .btn { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 10px; width: 100%; font-size: 1.1rem; font-weight: bold; cursor: pointer; margin-top: 20px; }
-        .history-card { border-bottom: 1px solid #eee; padding: 15px 0; font-size: 0.9rem; }
-        .history-date { font-weight: bold; color: var(--primary); }
+        input, textarea { width: 100%; padding: 12px; margin-top: 5px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 1rem; }
+        
+        .btn { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 10px; width: 100%; font-size: 1.1rem; font-weight: bold; cursor: pointer; margin-top: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .btn:disabled { background: #ccc; cursor: not-allowed; }
+        .btn-ai { background: var(--accent); margin-bottom: 15px; }
+        
+        #previewImage { width: 100%; border-radius: 10px; margin-top: 10px; display: none; border: 1px solid #ddd; }
+        .history-card { border-left: 3px solid #eee; padding-left: 15px; margin-bottom: 20px; padding-bottom: 10px; }
+        .history-date { font-weight: bold; color: var(--primary); margin-bottom: 5px; }
     </style>
 </head>
 <body>
 
     <div class="card pet-header">
-        <h2 id="p_Name" style="margin:0;">🐾 尚未輸入</h2>
+        <h2 id="p_Name" style="margin:0;">🐾 載入中...</h2>
         <div class="info-grid">
-            <div>出生年：<span id="p_BirthYear">--</span></div>
-            <div>品種：<span id="p_Breed">--</span></div>
-            <div style="grid-column: span 2;">過敏物：<span id="p_Allergies">--</span></div>
+            <div class="info-item"><b>出生年份</b><span id="p_BirthYear">--</span></div>
+            <div class="info-item"><b>品種</b><span id="p_Breed">--</span></div>
+            <div class="info-item" style="grid-column: span 2;"><b>已知過敏原</b><span id="p_Allergies">--</span></div>
         </div>
-        <p style="margin:10px 0 0 0; font-size: 0.7rem; opacity: 0.8;">ID: <span id="displayId">--</span></p>
+        <p style="margin:10px 0 0 0; font-size: 0.65rem; opacity: 0.7;">系統辨識碼: <span id="displayId">--</span></p>
     </div>
 
     <div class="card">
-        <h3>📝 新增就診紀錄</h3>
-        <label>就診日期</label>
-        <input type="date" id="Date">
-        <label>就診醫院</label>
-        <input type="text" id="Clinic_Name" placeholder="醫院名稱">
-        <label>體重 (kg)</label>
-        <input type="number" id="Weight" step="0.1" placeholder="0.0">
-        <label>醫師診斷 (Diagnosis)</label>
-        <textarea id="Diagnosis" rows="2" placeholder="診斷結果"></textarea>
-        <label>醫師叮囑 (Doctor_Advice)</label>
-        <textarea id="Doctor_Advice" rows="2" placeholder="建議事項"></textarea>
-        <label>用藥紀錄 (Medication_Taken)</label>
-        <input type="text" id="Medication_Taken" placeholder="藥名或處方">
+        <h3>➕ 新增就診/健康紀錄</h3>
         
-        <button class="btn" onclick="saveData()">💾 儲存紀錄</button>
+        <label>📸 上傳檢查單/藥袋 (AI 自動填寫)</label>
+        <input type="file" id="fileInput" accept="image/*" capture="camera" onchange="previewFile()">
+        <img id="previewImage" src="" alt="預覽圖">
+        <button id="aiBtn" class="btn btn-ai" onclick="uploadToAi()" disabled>✨ 使用 Gemini AI 辨識照片</button>
+
+        <hr style="border:0; border-top:1px solid #eee; margin: 20px 0;">
+
+        <label>就診日期 (Date)</label>
+        <input type="date" id="Date">
+
+        <label>就診醫院 (Clinic_Name)</label>
+        <input type="text" id="Clinic_Name" placeholder="醫院名稱">
+
+        <label>體重 (Weight - kg)</label>
+        <input type="number" id="Weight" step="0.1" placeholder="0.0">
+
+        <label>醫師診斷 (Diagnosis)</label>
+        <textarea id="Diagnosis" rows="2" placeholder="醫師的初步診斷"></textarea>
+
+        <label>醫師叮囑 (Doctor_Advice)</label>
+        <textarea id="Doctor_Advice" rows="2" placeholder="醫生的建議事項"></textarea>
+
+        <label>用藥紀錄 (Medication_Taken)</label>
+        <input type="text" id="Medication_Taken" placeholder="處方箋或藥名">
+
+        <button class="btn" id="saveBtn" onclick="saveData()">💾 儲存並同步至雲端</button>
     </div>
 
     <div class="card">
-        <h3>📅 歷史紀錄回看</h3>
-        <div id="historyList">正在讀取雲端資料...</div>
+        <h3>📅 歷史健康紀錄</h3>
+        <div id="historyList" style="color:#999; font-size: 0.9rem;">正在載入歷史資料...</div>
     </div>
 
 <script>
+    // --- 核心設定區 ---
     const liffId = "2008190733-fod2tVTS"; 
     const makeWebhookUrl = "https://hook.us2.make.com/4w3lf7uwjldhz7flcg2dpkpckwaxoz2p";
     let currentPetId = "";
+    let userLineId = "";
 
     async function main() {
-        await liff.init({ liffId: liffId });
-        if (!liff.isLoggedIn()) {
-            liff.login();
-        } else {
-            const urlParams = new URLSearchParams(window.location.search);
-            currentPetId = urlParams.get('id');
-            if (currentPetId) {
-                document.getElementById('displayId').innerText = currentPetId;
-                document.getElementById('Date').value = new Date().toISOString().split('T')[0];
-                fetchPetBasicInfo(currentPetId); // 抓基本資料
-                fetchHistory(currentPetId);      // 抓歷史紀錄
+        try {
+            await liff.init({ liffId: liffId });
+            if (!liff.isLoggedIn()) {
+                liff.login();
+            } else {
+                const profile = await liff.getProfile();
+                userLineId = profile.userId; // 取得使用者的 LINE ID
+                
+                const urlParams = new URLSearchParams(window.location.search);
+                currentPetId = urlParams.get('id');
+
+                if (currentPetId) {
+                    document.getElementById('displayId').innerText = currentPetId;
+                    document.getElementById('Date').value = new Date().toISOString().split('T')[0];
+                    fetchPetBasicInfo(currentPetId); 
+                    fetchHistory(currentPetId);
+                } else {
+                    document.getElementById('historyList').innerText = "請掃描 QR Code 進入系統";
+                }
             }
+        } catch (err) {
+            console.error("LIFF 初始化失敗", err);
         }
     }
 
-    // 1. 抓取基本資料 (串接 Make.com)
-    function fetchPetBasicInfo(id) {
-        // 這邊未來會透過 Make.com 從 Pet_List 撈資料
-        // 目前先寫一個模擬範例，讓您看介面效果
-        document.getElementById('p_Name').innerText = "🐾 小乖";
-        document.getElementById('p_BirthYear').innerText = "2020";
-        document.getElementById('p_Breed').innerText = "米克斯";
-        document.getElementById('p_Allergies').innerText = "海鮮、禽肉";
+    // 預覽照片
+    function previewFile() {
+        const file = document.getElementById('fileInput').files[0];
+        const preview = document.getElementById('previewImage');
+        const aiBtn = document.getElementById('aiBtn');
+        const reader = new FileReader();
+        reader.onloadend = function () {
+            preview.src = reader.result;
+            preview.style.display = 'block';
+            aiBtn.disabled = false;
+        }
+        if (file) reader.readAsDataURL(file);
     }
 
-    // 2. 儲存資料
+    // 抓取基本資料 (由 Make.com 的另一組 Scenario 回傳，此處先留存邏輯)
+    function fetchPetBasicInfo(id) {
+        // 這裡可以透過 fetch 向 Make.com 請求該 ID 的資料
+        // 目前先顯示等待狀態
+        console.log("正在請求寵物資訊:", id);
+    }
+
+    // 儲存資料到雲端
     function saveData() {
+        const saveBtn = document.getElementById('saveBtn');
+        saveBtn.disabled = true;
+        saveBtn.innerText = "傳送中...";
+
         const data = {
             RecordID: "REC" + Date.now(),
             PetID: currentPetId,
+            OwnerLINEID: userLineId, // 傳送目前操作者的 LINE ID
             Date: document.getElementById('Date').value,
             Weight: document.getElementById('Weight').value,
             Medication_Taken: document.getElementById('Medication_Taken').value,
             Clinic_Name: document.getElementById('Clinic_Name').value,
             Doctor_Advice: document.getElementById('Doctor_Advice').value,
             Diagnosis: document.getElementById('Diagnosis').value,
-            PhotoURL: ""
+            PhotoURL: "" 
         };
 
         fetch(makeWebhookUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
-        }).then(res => {
+        })
+        .then(res => {
             if(res.ok) {
-                alert("儲存成功！");
+                alert("🎉 健康紀錄已儲存！");
                 location.reload();
             }
+        })
+        .catch(err => {
+            alert("儲存失敗，請檢查網路連線");
+            saveBtn.disabled = false;
+            saveBtn.innerText = "💾 儲存並同步至雲端";
         });
     }
 
-    // 3. 抓取歷史紀錄 (串接 Make.com)
+    // AI 辨識功能 (啟動 Make.com 的 AI 辨識流程)
+    function uploadToAi() {
+        alert("正在將照片送往 Gemini AI 進行醫療文件辨識，請稍候...");
+        // 這裡後續將實作圖片轉 Base64 傳送到 Make.com
+    }
+
+    // 載入歷史紀錄
     function fetchHistory(id) {
-        document.getElementById('historyList').innerHTML = "目前暫無紀錄，請先新增一筆。";
+        // 此處預留給從 Google Sheets 回傳資料顯示用
     }
 
     main();
