@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>寵物雲端健康卡</title>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background-color: #f4f7f6; }
+        .card { background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        h2 { color: #2c3e50; }
+        #petInfo { margin-top: 20px; }
+        .btn { background: #00b900; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; width: 100%; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>🐾 寵物健康資料卡</h2>
+    <div id="userInfo">載入中...</div>
+    <hr>
+    <div id="petInfo">
+        <p><strong>當前寵物 ID:</strong> <span id="displayId">未偵測到</span></p>
+        <div id="dataArea">正在從雲端讀取資料...</div>
+    </div>
+    
+    <button class="btn" onclick="uploadPhoto()">📸 拍照/上傳辨識</button>
+</div>
+
+<script>
+    const liffId = "您的_LIFF_ID_填在這裡"; // 👈 請換成第1步得到的 ID
+
+    async function main() {
+        await liff.init({ liffId: liffId });
+        if (!liff.isLoggedIn()) {
+            liff.login();
+        } else {
+            const profile = await liff.getProfile();
+            document.getElementById('userInfo').innerHTML = `你好, ${profile.displayName} !`;
+            
+            // 抓取網址後的 ?id=xxxx
+            const urlParams = new URLSearchParams(window.location.search);
+            const petId = urlParams.get('id');
+            
+            if (petId) {
+                document.getElementById('displayId').innerText = petId;
+                fetchData(petId);
+            } else {
+                document.getElementById('dataArea').innerText = "請掃描正確的寵物 QR Code";
+            }
+        }
+    }
+
+    async function fetchData(id) {
+        // 這裡未來會連動到 Make.com 的 Webhook
+        console.log("正在搜尋 ID 為 " + id + " 的資料...");
+    }
+
+    function uploadPhoto() {
+        alert("即將連動 Make.com 與 Gemini 進行辨識！");
+    }
+
+    main();
+</script>
+</body>
+</html>
