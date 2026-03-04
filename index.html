@@ -9,70 +9,68 @@
         :root { --primary: #00b900; --bg: #f4f7f6; --text: #333; --accent: #f39c12; }
         body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; }
         .card { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); margin-bottom: 20px; }
-        
         .pet-header { background: linear-gradient(135deg, #00b900 0%, #008a00 100%); color: white; border: none; }
         .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.9rem; margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 10px; }
-        
+        .info-item b { opacity: 0.8; font-size: 0.75rem; display: block; }
         h3 { border-left: 5px solid var(--primary); padding-left: 10px; font-size: 1.1rem; margin: 0 0 15px 0; }
         label { display: block; margin-top: 12px; font-weight: bold; font-size: 0.85rem; color: #666; }
         input, textarea { width: 100%; padding: 12px; margin-top: 5px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 1rem; }
-        
         .btn { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 10px; width: 100%; font-size: 1.1rem; font-weight: bold; cursor: pointer; margin-top: 20px; }
         .btn:disabled { background: #ccc; cursor: not-allowed; }
-        
-        /* 歷史紀錄文件式樣式 */
-        .history-container { margin-top: 10px; min-height: 50px; }
         .history-item { border-bottom: 1px solid #eee; padding: 15px 0; }
         .history-item:last-child { border-bottom: none; }
         .h-date { color: var(--primary); font-weight: bold; font-size: 0.85rem; margin-bottom: 4px; }
-        .h-hospital { font-weight: bold; font-size: 1rem; color: #333; margin-bottom: 6px; }
+        .h-petname { font-size: 1.1rem; font-weight: bold; color: #333; }
+        .h-hospital { font-weight: bold; font-size: 0.95rem; color: #555; margin-bottom: 6px; }
         .h-diag { font-size: 0.9rem; color: #555; background: #f8f9fa; padding: 12px; border-radius: 8px; line-height: 1.5; border-left: 4px solid #ddd; margin-bottom: 8px; }
-        .h-meta { font-size: 0.85rem; color: #666; display: flex; justify-content: space-between; align-items: center; }
-        .h-photo-btn { color: var(--accent); text-decoration: none; font-weight: bold; border: 1px solid var(--accent); padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; }
-        
-        #previewImage { width: 100%; border-radius: 10px; margin-top: 10px; display: none; border: 1px solid #ddd; }
-        .loading-text { text-align: center; color: #999; font-size: 0.9rem; padding: 20px; }
+        #previewImage { width: 100%; border-radius: 10px; margin-top: 10px; display: none; }
+        .loading-text { text-align: center; color: #999; padding: 20px; }
     </style>
 </head>
 <body>
 
     <div class="card pet-header">
-        <h2 id="p_Name" style="margin:0;">🐾 雲端健康卡</h2>
+        <h2 id="p_Name_Title">🐾 雲端健康卡</h2>
         <div class="info-grid">
             <div class="info-item"><b>寵物 ID</b><span id="displayId">連線中...</span></div>
-            <div class="info-item"><b>連線狀態</b><span id="syncStatus">同步中</span></div>
+            <div class="info-item"><b>連線狀態</b><span>已同步</span></div>
         </div>
     </div>
 
     <div class="card">
         <h3>➕ 新增就診紀錄</h3>
         
-        <label>📸 上傳檢查單/藥袋照片</label>
+        <label>📸 上傳照片</label>
         <input type="file" id="fileInput" accept="image/*" capture="camera" onchange="previewFile()">
-        <img id="previewImage" src="" alt="預覽圖">
+        <img id="previewImage" src="">
+
+        <label>寵物姓名</label>
+        <input type="text" id="PetName" placeholder="例如：咪咪">
+
+        <label>寵物出生日</label>
+        <input type="date" id="PetBirth">
 
         <label>就診日期</label>
         <input type="date" id="Date">
 
         <label>就診醫院</label>
-        <input type="text" id="Clinic_Name" placeholder="輸入醫院名稱">
+        <input type="text" id="Clinic_Name">
 
         <label>體重 (kg)</label>
-        <input type="number" id="Weight" step="0.1" placeholder="0.0">
+        <input type="number" id="Weight" step="0.1">
 
         <label>醫師診斷</label>
-        <textarea id="Diagnosis" rows="2" placeholder="請輸入診斷疾病或檢查結果"></textarea>
+        <textarea id="Diagnosis" rows="2"></textarea>
 
         <label>醫師叮囑與用藥</label>
-        <textarea id="Doctor_Advice" rows="2" placeholder="請輸入醫囑或處方內容"></textarea>
+        <textarea id="Doctor_Advice" rows="2"></textarea>
 
-        <button class="btn" id="saveBtn" onclick="saveData()">💾 儲存並同步至雲端</button>
+        <button class="btn" id="saveBtn" onclick="saveData()">💾 儲存紀錄</button>
     </div>
 
     <div class="card">
-        <h3>📅 歷史就診紀錄 (文件式)</h3>
-        <div id="historyList" class="history-container">
-            </div>
+        <h3>📅 歷史就診紀錄</h3>
+        <div id="historyList" class="history-container"></div>
     </div>
 
 <script>
@@ -85,32 +83,19 @@
     async function main() {
         try {
             await liff.init({ liffId: liffId });
-            if (!liff.isLoggedIn()) {
-                liff.login();
-            } else {
+            if (!liff.isLoggedIn()) { liff.login(); } 
+            else {
                 const urlParams = new URLSearchParams(window.location.search);
                 currentPetId = urlParams.get('id');
-
                 if (currentPetId) {
-                    // 1. 設定基礎資訊
                     document.getElementById('displayId').innerText = currentPetId;
-                    document.getElementById('p_Name').innerText = "🐾 寵物 ID: " + currentPetId;
                     document.getElementById('Date').value = new Date().toISOString().split('T')[0];
-                    document.getElementById('syncStatus').innerText = "已連線";
-                    
-                    // 2. 顯示讀取中狀態並抓取歷史紀錄
-                    document.getElementById('historyList').innerHTML = '<div class="loading-text">正在讀取雲端歷史紀錄...</div>';
                     fetchHistory(currentPetId);
                 } else {
-                    // 3. 若網址沒有帶 ID，顯示友善提示
-                    document.getElementById('historyList').innerHTML = '<div class="loading-text">⚠️ 偵測不到寵物 ID，請由專屬 QR Code 進入頁面。</div>';
-                    document.getElementById('displayId').innerText = "未讀取";
+                    document.getElementById('historyList').innerHTML = '<div class="loading-text">⚠️ 偵測不到 ID</div>';
                 }
             }
-        } catch (err) { 
-            console.error("LIFF 初始化失敗", err); 
-            document.getElementById('historyList').innerHTML = '<div class="loading-text">❌ LIFF 連線失敗</div>';
-        }
+        } catch (err) { console.error(err); }
     }
 
     function previewFile() {
@@ -122,12 +107,10 @@
     }
 
     function saveData() {
-        const fileInput = document.getElementById('fileInput');
         const saveBtn = document.getElementById('saveBtn');
         saveBtn.disabled = true;
-        saveBtn.innerText = "資料存檔中...";
-
-        const file = fileInput.files[0];
+        saveBtn.innerText = "儲存中...";
+        const file = document.getElementById('fileInput').files[0];
         if (file) {
             const reader = new FileReader();
             reader.readAsDataURL(file);
@@ -138,6 +121,8 @@
     async function sendToMake(base64Image) {
         const data = {
             PetID: currentPetId,
+            PetName: document.getElementById('PetName').value,
+            PetBirth: document.getElementById('PetBirth').value,
             Date: document.getElementById('Date').value,
             Weight: document.getElementById('Weight').value,
             Clinic_Name: document.getElementById('Clinic_Name').value,
@@ -145,19 +130,11 @@
             Doctor_Advice: document.getElementById('Doctor_Advice').value,
             PhotoURL: base64Image
         };
-
         try {
-            await fetch(saveWebhookUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            });
-            alert("🎉 紀錄已成功儲存！");
+            await fetch(saveWebhookUrl, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)});
+            alert("🎉 儲存成功！");
             location.reload();
-        } catch (err) {
-            alert("儲存失敗，請檢查網路");
-            document.getElementById('saveBtn').disabled = false;
-        }
+        } catch (err) { alert("儲存失敗"); saveBtn.disabled = false; }
     }
 
     async function fetchHistory(id) {
@@ -165,42 +142,25 @@
         try {
             const response = await fetch(`${fetchHistoryWebhookUrl}?id=${id}`);
             const historyData = await response.json();
-            
-            // 資料回來後，清空「正在讀取」的文字
             listDiv.innerHTML = "";
-
             if (!historyData || historyData.length === 0) {
-                listDiv.innerHTML = '<div class="loading-text">📭 目前尚無此寵物的歷史紀錄。</div>';
+                listDiv.innerHTML = '<div class="loading-text">📭 尚無紀錄</div>';
                 return;
             }
-
-            // 日期由新到舊排序
             historyData.sort((a, b) => new Date(b.Date) - new Date(a.Date));
-
-            let htmlContent = "";
             historyData.forEach(item => {
-                htmlContent += `
+                listDiv.innerHTML += `
                     <div class="history-item">
-                        <div class="h-date">📅 日期：${item.Date || '未填'} (體重: ${item.Weight || '--'}kg)</div>
+                        <div class="h-petname">🐶 ${item.PetName || '未填姓名'} (生日: ${item.PetBirth || '未填'})</div>
+                        <div class="h-date">📅 就診日期：${item.Date || '未填'} (體重: ${item.Weight || '--'}kg)</div>
                         <div class="h-hospital">🏥 醫院：${item.Clinic_Name || '未註明'}</div>
-                        <div class="h-diag">
-                            <b>診斷內容：</b><br>${item.Diagnosis || '無紀錄'}<br><br>
-                            <b>醫囑藥名：</b><br>${item.Doctor_Advice || '無紀錄'}
-                        </div>
-                        <div class="h-meta">
-                            <span></span>
-                            ${item.PhotoURL ? `<a href="${item.PhotoURL}" target="_blank" class="h-photo-btn">🖼️ 查看藥袋照片</a>` : ''}
-                        </div>
+                        <div class="h-diag"><b>診斷：</b>${item.Diagnosis || '無紀錄'}<br><b>醫囑：</b>${item.Doctor_Advice || '無紀錄'}</div>
+                        ${item.PhotoURL ? `<a href="${item.PhotoURL}" target="_blank" class="h-photo-btn">🖼️ 查看照片</a>` : ''}
                     </div>
                 `;
             });
-            listDiv.innerHTML = htmlContent;
-
-        } catch (err) {
-            listDiv.innerHTML = '<div class="loading-text">❌ 讀取失敗，請確認雲端 Webhook 是否啟動</div>';
-        }
+        } catch (err) { listDiv.innerHTML = '<div class="loading-text">❌ 讀取失敗</div>'; }
     }
-
     main();
 </script>
 </body>
