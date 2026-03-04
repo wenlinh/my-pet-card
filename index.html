@@ -26,6 +26,9 @@
         #previewImage { width: 100%; border-radius: 10px; margin-top: 10px; display: none; border: 1px solid #ddd; }
         .history-card { border-left: 3px solid #eee; padding-left: 15px; margin-bottom: 20px; padding-bottom: 10px; }
         .history-date { font-weight: bold; color: var(--primary); margin-bottom: 5px; }
+        
+        /* 載入動畫提示 */
+        .loading-text { font-size: 0.8rem; color: var(--accent); display: none; margin-top: 5px; text-align: center; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -47,6 +50,7 @@
         <input type="file" id="fileInput" accept="image/*" capture="camera" onchange="previewFile()">
         <img id="previewImage" src="" alt="預覽圖">
         <button id="aiBtn" class="btn btn-ai" onclick="uploadToAi()" disabled>✨ 使用 Gemini AI 辨識照片</button>
+        <div id="loadingHint" class="loading-text">🚀 正在進行 AI 醫療影像分析，請勿關閉視窗...</div>
 
         <hr style="border:0; border-top:1px solid #eee; margin: 20px 0;">
 
@@ -90,7 +94,7 @@
                 liff.login();
             } else {
                 const profile = await liff.getProfile();
-                userLineId = profile.userId; // 取得使用者的 LINE ID
+                userLineId = profile.userId; 
                 
                 const urlParams = new URLSearchParams(window.location.search);
                 currentPetId = urlParams.get('id');
@@ -123,14 +127,65 @@
         if (file) reader.readAsDataURL(file);
     }
 
-    // 抓取基本資料 (由 Make.com 的另一組 Scenario 回傳，此處先留存邏輯)
+    // 抓取基本資料 (由 Make.com 的另一組 Scenario 回傳)
     function fetchPetBasicInfo(id) {
-        // 這裡可以透過 fetch 向 Make.com 請求該 ID 的資料
-        // 目前先顯示等待狀態
         console.log("正在請求寵物資訊:", id);
+        // 此處目前先保持載入狀態，待後續 Scenario 完成後對接
+        document.getElementById('p_Name').innerText = "🐾 寵物 ID: " + id;
     }
 
-    // 儲存資料到雲端
+    // AI 辨識功能：將照片轉為 Base64 並傳送到 Make.com
+    async function uploadToAi() {
+        const fileInput = document.getElementById('fileInput');
+        const aiBtn = document.getElementById('aiBtn');
+        const loadingHint = document.getElementById('loadingHint');
+        
+        if (!fileInput.files[0]) {
+            alert("請先選擇或拍攝一張照片！");
+            return;
+        }
+
+        aiBtn.disabled = true;
+        aiBtn.innerText = "🚀 AI 辨識中...";
+        loadingHint.style.display = "block";
+
+        const reader = new FileReader();
+        reader.readAsDataURL(fileInput.files[0]);
+        
+        reader.onload = async function () {
+            const base64Data = reader.result; 
+
+            const payload = {
+                PetID: currentPetId,
+                PhotoURL: base64Data, // 傳送照片代碼
+                isAI: true,           // 標記為 AI 流程
+                Date: document.getElementById('Date').value // 同步日期
+            };
+
+            try {
+                const response = await fetch(makeWebhookUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    alert("✅ 影像分析請求已發送！\n請稍候 5-10 秒等待 AI 辨識回傳結果至您的雲端資料庫。");
+                } else {
+                    throw new Error("Make.com 回應錯誤");
+                }
+            } catch (err) {
+                alert("辨識請求失敗，請檢查網路或 Make.com 設定");
+                console.error(err);
+            } finally {
+                aiBtn.disabled = false;
+                aiBtn.innerText = "✨ 使用 Gemini AI 辨識照片";
+                loadingHint.style.display = "none";
+            }
+        };
+    }
+
+    // 儲存資料到雲端 (一般存檔功能)
     function saveData() {
         const saveBtn = document.getElementById('saveBtn');
         saveBtn.disabled = true;
@@ -139,14 +194,15 @@
         const data = {
             RecordID: "REC" + Date.now(),
             PetID: currentPetId,
-            OwnerLINEID: userLineId, // 傳送目前操作者的 LINE ID
+            OwnerLINEID: userLineId, 
             Date: document.getElementById('Date').value,
             Weight: document.getElementById('Weight').value,
             Medication_Taken: document.getElementById('Medication_Taken').value,
             Clinic_Name: document.getElementById('Clinic_Name').value,
             Doctor_Advice: document.getElementById('Doctor_Advice').value,
             Diagnosis: document.getElementById('Diagnosis').value,
-            PhotoURL: "" 
+            PhotoURL: "",
+            isAI: false // 標記為一般手動儲存
         };
 
         fetch(makeWebhookUrl, {
@@ -167,15 +223,9 @@
         });
     }
 
-    // AI 辨識功能 (啟動 Make.com 的 AI 辨識流程)
-    function uploadToAi() {
-        alert("正在將照片送往 Gemini AI 進行醫療文件辨識，請稍候...");
-        // 這裡後續將實作圖片轉 Base64 傳送到 Make.com
-    }
-
-    // 載入歷史紀錄
+    // 載入歷史紀錄 (預留)
     function fetchHistory(id) {
-        // 此處預留給從 Google Sheets 回傳資料顯示用
+        document.getElementById('historyList').innerText = "暫無歷史資料";
     }
 
     main();
