@@ -145,8 +145,8 @@
         const data = {
             PetID: currentPetId,
             PetName: document.getElementById('PetName').value,
-            PetBreed: document.getElementById('PetBreed').value,
-            PetBirth: document.getElementById('PetBirth').value,
+            PetBreed: document.getElementById('Breed').value,
+            PetBirth: document.getElementById('Birth Year').value,
             Allergy: document.getElementById('Allergy').value,
             Date: document.getElementById('Date').value,
             Weight: document.getElementById('Weight').value,
@@ -169,7 +169,7 @@
             const historyData = await response.json();
             listDiv.innerHTML = "";
             if (!historyData || historyData.length === 0) {
-                document.getElementById('p_Display_Name').innerText = "🐾 新寵物卡";
+                document.getElementById('p_Display_Name').innerText = "🐾 " + (latest.PetName || "寵物");
                 listDiv.innerHTML = '<div class="loading-text">📭 尚無歷史紀錄</div>';
                 return;
             }
@@ -177,8 +177,9 @@
             // --- 自動彙整邏輯 ---
             let allAllergies = new Set();
             historyData.forEach(item => {
-                if(item.Allergy) {
-                    item.Allergy.split(/[,，、\s]+/).forEach(a => { if(a) allAllergies.add(a); });
+                if(item.Allergies) { 
+    item.Allergies.split(/[,，、\s]+/).forEach(a => { if(a) allAllergies.add(a); });
+});
                 }
             });
 
