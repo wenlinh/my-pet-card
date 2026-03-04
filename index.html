@@ -10,39 +10,37 @@
         body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; }
         .card { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); margin-bottom: 20px; }
         
-        /* 頂部基本資訊樣式 */
         .pet-header { background: linear-gradient(135deg, #00b900 0%, #008a00 100%); color: white; border: none; }
         .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.9rem; margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 10px; }
-        .info-item b { opacity: 0.8; font-size: 0.75rem; display: block; }
         
         h3 { border-left: 5px solid var(--primary); padding-left: 10px; font-size: 1.1rem; margin: 0 0 15px 0; }
         label { display: block; margin-top: 12px; font-weight: bold; font-size: 0.85rem; color: #666; }
         input, textarea { width: 100%; padding: 12px; margin-top: 5px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 1rem; }
         
-        .btn { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 10px; width: 100%; font-size: 1.1rem; font-weight: bold; cursor: pointer; margin-top: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .btn { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 10px; width: 100%; font-size: 1.1rem; font-weight: bold; cursor: pointer; margin-top: 20px; }
         .btn:disabled { background: #ccc; cursor: not-allowed; }
         
-        /* 歷史紀錄卡片樣式 */
-        .history-container { margin-top: 10px; }
-        .history-item { border-bottom: 1px solid #eee; padding: 15px 0; position: relative; }
+        /* 歷史紀錄文件式樣式 */
+        .history-container { margin-top: 10px; min-height: 100px; }
+        .history-item { border-bottom: 1px solid #eee; padding: 15px 0; }
         .history-item:last-child { border-bottom: none; }
         .h-date { color: var(--primary); font-weight: bold; font-size: 0.85rem; margin-bottom: 4px; }
         .h-hospital { font-weight: bold; font-size: 1rem; color: #333; margin-bottom: 6px; }
-        .h-diag { font-size: 0.9rem; color: #555; background: #f8f9fa; padding: 10px; border-radius: 8px; line-height: 1.4; border-left: 3px solid #ddd; }
-        .h-meta { font-size: 0.8rem; color: #888; margin-top: 8px; display: flex; justify-content: space-between; align-items: center; }
-        .h-photo-btn { color: var(--accent); text-decoration: none; font-weight: bold; border: 1px solid var(--accent); padding: 2px 8px; border-radius: 15px; font-size: 0.75rem; }
+        .h-diag { font-size: 0.9rem; color: #555; background: #f8f9fa; padding: 12px; border-radius: 8px; line-height: 1.5; border-left: 4px solid #ddd; margin-bottom: 8px; }
+        .h-meta { font-size: 0.85rem; color: #666; display: flex; justify-content: space-between; align-items: center; }
+        .h-photo-btn { color: var(--accent); text-decoration: none; font-weight: bold; border: 1px solid var(--accent); padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; }
         
         #previewImage { width: 100%; border-radius: 10px; margin-top: 10px; display: none; border: 1px solid #ddd; }
-        .loading-text { text-align: center; color: #999; font-size: 0.9rem; padding: 20px; }
+        .loading-text { text-align: center; color: #999; font-size: 0.9rem; padding: 30px; }
     </style>
 </head>
 <body>
 
     <div class="card pet-header">
-        <h2 id="p_Name" style="margin:0;">🐾 載入中...</h2>
+        <h2 id="p_Name" style="margin:0;">🐾 雲端健康卡</h2>
         <div class="info-grid">
-            <div class="info-item"><b>寵物 ID</b><span id="displayId">--</span></div>
-            <div class="info-item"><b>目前狀態</b><span>雲端連線中</span></div>
+            <div class="info-item"><b>寵物 ID</b><span id="displayId">連線中...</span></div>
+            <div class="info-item"><b>資料狀態</b><span id="syncStatus">同步中</span></div>
         </div>
     </div>
 
@@ -57,16 +55,16 @@
         <input type="date" id="Date">
 
         <label>就診醫院</label>
-        <input type="text" id="Clinic_Name" placeholder="例如：中興動物醫院">
+        <input type="text" id="Clinic_Name" placeholder="輸入醫院名稱">
 
         <label>體重 (kg)</label>
         <input type="number" id="Weight" step="0.1" placeholder="0.0">
 
         <label>醫師診斷</label>
-        <textarea id="Diagnosis" rows="2" placeholder="醫師的診斷或檢查結果"></textarea>
+        <textarea id="Diagnosis" rows="2" placeholder="請輸入診斷疾病或檢查結果"></textarea>
 
         <label>醫師叮囑與用藥</label>
-        <textarea id="Doctor_Advice" rows="2" placeholder="醫師建議與用藥說明"></textarea>
+        <textarea id="Doctor_Advice" rows="2" placeholder="請輸入醫囑或處方內容"></textarea>
 
         <button class="btn" id="saveBtn" onclick="saveData()">💾 儲存並同步至雲端</button>
     </div>
@@ -74,14 +72,13 @@
     <div class="card">
         <h3>📅 歷史就診紀錄 (文件式)</h3>
         <div id="historyList" class="history-container">
-            <div class="loading-text">正在從雲端同步歷史資料...</div>
+            <div class="loading-text">正在讀取雲端歷史紀錄...</div>
         </div>
     </div>
 
 <script>
     const liffId = "2008190733-fod2tVTS"; 
     const saveWebhookUrl = "https://hook.us2.make.com/4w3lf7uwjldhz7flcg2dpkpckwaxoz2p";
-    // 已更新為您的新讀取網址
     const fetchHistoryWebhookUrl = "https://hook.us2.make.com/imjmhwgb72htsyiammee3svrgl9faczx"; 
 
     let currentPetId = "";
@@ -99,26 +96,21 @@
                     document.getElementById('displayId').innerText = currentPetId;
                     document.getElementById('p_Name').innerText = "🐾 寵物 ID: " + currentPetId;
                     document.getElementById('Date').value = new Date().toISOString().split('T')[0];
+                    document.getElementById('syncStatus').innerText = "已連線";
                     
-                    // 執行讀取歷史紀錄
                     fetchHistory(currentPetId);
                 } else {
-                    document.getElementById('historyList').innerHTML = '<div class="loading-text">請掃描正確的 QR Code 進入</div>';
+                    document.getElementById('historyList').innerHTML = '<div class="loading-text">⚠️ 尚未讀取到 ID，請掃描 QR Code。</div>';
                 }
             }
-        } catch (err) {
-            console.error("LIFF 初始化失敗", err);
-        }
+        } catch (err) { console.error(err); }
     }
 
     function previewFile() {
         const file = document.getElementById('fileInput').files[0];
         const preview = document.getElementById('previewImage');
         const reader = new FileReader();
-        reader.onloadend = function () {
-            preview.src = reader.result;
-            preview.style.display = 'block';
-        }
+        reader.onloadend = () => { preview.src = reader.result; preview.style.display = 'block'; }
         if (file) reader.readAsDataURL(file);
     }
 
@@ -126,16 +118,14 @@
         const fileInput = document.getElementById('fileInput');
         const saveBtn = document.getElementById('saveBtn');
         saveBtn.disabled = true;
-        saveBtn.innerText = "正在儲存至雲端...";
+        saveBtn.innerText = "資料存檔中...";
 
         const file = fileInput.files[0];
         if (file) {
             const reader = new FileReader();
             reader.readAsDataURL(file);
-            reader.onload = function() { sendToMake(reader.result); };
-        } else {
-            sendToMake(""); 
-        }
+            reader.onload = () => sendToMake(reader.result);
+        } else { sendToMake(""); }
     }
 
     async function sendToMake(base64Image) {
@@ -150,50 +140,47 @@
         };
 
         try {
-            const response = await fetch(saveWebhookUrl, {
+            await fetch(saveWebhookUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
             });
-
-            if (response.ok) {
-                alert("🎉 健康紀錄已儲存！");
-                location.reload();
-            }
+            alert("🎉 紀錄已成功儲存！");
+            location.reload();
         } catch (err) {
-            alert("儲存失敗，請確認網路連線");
+            alert("儲存失敗，請檢查網路");
             document.getElementById('saveBtn').disabled = false;
         }
     }
 
-    // 讀取歷史資料並渲染
     async function fetchHistory(id) {
         const listDiv = document.getElementById('historyList');
         try {
-            // 發送 GET 請求，帶入 id 參數
             const response = await fetch(`${fetchHistoryWebhookUrl}?id=${id}`);
             const historyData = await response.json();
             
+            // 核心修正：資料回來後，先徹底清空容器
+            listDiv.innerHTML = "";
+
             if (!historyData || historyData.length === 0) {
-                listDiv.innerHTML = '<div class="loading-text">📭 目前尚無就診紀錄</div>';
+                listDiv.innerHTML = '<div class="loading-text">📭 目前尚無歷史就診紀錄</div>';
                 return;
             }
 
-            // 依照日期排序 (最新的在最上面)
             historyData.sort((a, b) => new Date(b.Date) - new Date(a.Date));
 
             let htmlContent = "";
             historyData.forEach(item => {
                 htmlContent += `
                     <div class="history-item">
-                        <div class="h-date">📅 就診日期：${item.Date || '未填寫'}</div>
-                        <div class="h-hospital">🏥 ${item.Clinic_Name || '未註明醫院'}</div>
+                        <div class="h-date">📅 日期：${item.Date || '未填'} (體重: ${item.Weight || '--'}kg)</div>
+                        <div class="h-hospital">🏥 醫院：${item.Clinic_Name || '未註明'}</div>
                         <div class="h-diag">
-                            <b>診斷：</b>${item.Diagnosis || '無紀錄'}<br>
-                            <b>叮囑：</b>${item.Doctor_Advice || '無紀錄'}
+                            <b>診斷內容：</b><br>${item.Diagnosis || '無紀錄'}<br><br>
+                            <b>醫囑藥名：</b><br>${item.Doctor_Advice || '無紀錄'}
                         </div>
                         <div class="h-meta">
-                            <span>⚖️ 體重：${item.Weight || '--'} kg</span>
+                            <span></span>
                             ${item.PhotoURL ? `<a href="${item.PhotoURL}" target="_blank" class="h-photo-btn">🖼️ 查看藥袋照片</a>` : ''}
                         </div>
                     </div>
@@ -202,8 +189,7 @@
             listDiv.innerHTML = htmlContent;
 
         } catch (err) {
-            listDiv.innerHTML = '<div class="loading-text">❌ 無法載入歷史紀錄，請檢查 Webhook 或網路</div>';
-            console.error(err);
+            listDiv.innerHTML = '<div class="loading-text">❌ 無法載入歷史紀錄，請確認 Webhook 狀態</div>';
         }
     }
 
