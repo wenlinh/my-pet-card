@@ -21,7 +21,7 @@
         .btn:disabled { background: #ccc; cursor: not-allowed; }
         
         /* 歷史紀錄文件式樣式 */
-        .history-container { margin-top: 10px; min-height: 100px; }
+        .history-container { margin-top: 10px; min-height: 50px; }
         .history-item { border-bottom: 1px solid #eee; padding: 15px 0; }
         .history-item:last-child { border-bottom: none; }
         .h-date { color: var(--primary); font-weight: bold; font-size: 0.85rem; margin-bottom: 4px; }
@@ -31,7 +31,7 @@
         .h-photo-btn { color: var(--accent); text-decoration: none; font-weight: bold; border: 1px solid var(--accent); padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; }
         
         #previewImage { width: 100%; border-radius: 10px; margin-top: 10px; display: none; border: 1px solid #ddd; }
-        .loading-text { text-align: center; color: #999; font-size: 0.9rem; padding: 30px; }
+        .loading-text { text-align: center; color: #999; font-size: 0.9rem; padding: 20px; }
     </style>
 </head>
 <body>
@@ -40,7 +40,7 @@
         <h2 id="p_Name" style="margin:0;">🐾 雲端健康卡</h2>
         <div class="info-grid">
             <div class="info-item"><b>寵物 ID</b><span id="displayId">連線中...</span></div>
-            <div class="info-item"><b>資料狀態</b><span id="syncStatus">同步中</span></div>
+            <div class="info-item"><b>連線狀態</b><span id="syncStatus">同步中</span></div>
         </div>
     </div>
 
@@ -72,8 +72,7 @@
     <div class="card">
         <h3>📅 歷史就診紀錄 (文件式)</h3>
         <div id="historyList" class="history-container">
-            <div class="loading-text">正在讀取雲端歷史紀錄...</div>
-        </div>
+            </div>
     </div>
 
 <script>
@@ -93,17 +92,25 @@
                 currentPetId = urlParams.get('id');
 
                 if (currentPetId) {
+                    // 1. 設定基礎資訊
                     document.getElementById('displayId').innerText = currentPetId;
                     document.getElementById('p_Name').innerText = "🐾 寵物 ID: " + currentPetId;
                     document.getElementById('Date').value = new Date().toISOString().split('T')[0];
                     document.getElementById('syncStatus').innerText = "已連線";
                     
+                    // 2. 顯示讀取中狀態並抓取歷史紀錄
+                    document.getElementById('historyList').innerHTML = '<div class="loading-text">正在讀取雲端歷史紀錄...</div>';
                     fetchHistory(currentPetId);
                 } else {
-                    document.getElementById('historyList').innerHTML = '<div class="loading-text">⚠️ 尚未讀取到 ID，請掃描 QR Code。</div>';
+                    // 3. 若網址沒有帶 ID，顯示友善提示
+                    document.getElementById('historyList').innerHTML = '<div class="loading-text">⚠️ 偵測不到寵物 ID，請由專屬 QR Code 進入頁面。</div>';
+                    document.getElementById('displayId').innerText = "未讀取";
                 }
             }
-        } catch (err) { console.error(err); }
+        } catch (err) { 
+            console.error("LIFF 初始化失敗", err); 
+            document.getElementById('historyList').innerHTML = '<div class="loading-text">❌ LIFF 連線失敗</div>';
+        }
     }
 
     function previewFile() {
@@ -159,14 +166,15 @@
             const response = await fetch(`${fetchHistoryWebhookUrl}?id=${id}`);
             const historyData = await response.json();
             
-            // 核心修正：資料回來後，先徹底清空容器
+            // 資料回來後，清空「正在讀取」的文字
             listDiv.innerHTML = "";
 
             if (!historyData || historyData.length === 0) {
-                listDiv.innerHTML = '<div class="loading-text">📭 目前尚無歷史就診紀錄</div>';
+                listDiv.innerHTML = '<div class="loading-text">📭 目前尚無此寵物的歷史紀錄。</div>';
                 return;
             }
 
+            // 日期由新到舊排序
             historyData.sort((a, b) => new Date(b.Date) - new Date(a.Date));
 
             let htmlContent = "";
@@ -189,7 +197,7 @@
             listDiv.innerHTML = htmlContent;
 
         } catch (err) {
-            listDiv.innerHTML = '<div class="loading-text">❌ 無法載入歷史紀錄，請確認 Webhook 狀態</div>';
+            listDiv.innerHTML = '<div class="loading-text">❌ 讀取失敗，請確認雲端 Webhook 是否啟動</div>';
         }
     }
 
