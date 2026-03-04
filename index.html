@@ -21,14 +21,19 @@
         
         .btn { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 10px; width: 100%; font-size: 1.1rem; font-weight: bold; cursor: pointer; margin-top: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         .btn:disabled { background: #ccc; cursor: not-allowed; }
-        .btn-ai { background: var(--accent); margin-bottom: 15px; }
+        
+        /* 歷史紀錄卡片樣式 */
+        .history-container { margin-top: 10px; }
+        .history-item { border-bottom: 1px solid #eee; padding: 15px 0; position: relative; }
+        .history-item:last-child { border-bottom: none; }
+        .h-date { color: var(--primary); font-weight: bold; font-size: 0.85rem; margin-bottom: 4px; }
+        .h-hospital { font-weight: bold; font-size: 1rem; color: #333; margin-bottom: 6px; }
+        .h-diag { font-size: 0.9rem; color: #555; background: #f8f9fa; padding: 10px; border-radius: 8px; line-height: 1.4; border-left: 3px solid #ddd; }
+        .h-meta { font-size: 0.8rem; color: #888; margin-top: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .h-photo-btn { color: var(--accent); text-decoration: none; font-weight: bold; border: 1px solid var(--accent); padding: 2px 8px; border-radius: 15px; font-size: 0.75rem; }
         
         #previewImage { width: 100%; border-radius: 10px; margin-top: 10px; display: none; border: 1px solid #ddd; }
-        .history-card { border-left: 3px solid #eee; padding-left: 15px; margin-bottom: 20px; padding-bottom: 10px; }
-        .history-date { font-weight: bold; color: var(--primary); margin-bottom: 5px; }
-        
-        /* 載入動畫提示 */
-        .loading-text { font-size: 0.8rem; color: var(--accent); display: none; margin-top: 5px; text-align: center; font-weight: bold; }
+        .loading-text { text-align: center; color: #999; font-size: 0.9rem; padding: 20px; }
     </style>
 </head>
 <body>
@@ -36,56 +41,50 @@
     <div class="card pet-header">
         <h2 id="p_Name" style="margin:0;">🐾 載入中...</h2>
         <div class="info-grid">
-            <div class="info-item"><b>出生年份</b><span id="p_BirthYear">--</span></div>
-            <div class="info-item"><b>品種</b><span id="p_Breed">--</span></div>
-            <div class="info-item" style="grid-column: span 2;"><b>已知過敏原</b><span id="p_Allergies">--</span></div>
+            <div class="info-item"><b>寵物 ID</b><span id="displayId">--</span></div>
+            <div class="info-item"><b>目前狀態</b><span>雲端連線中</span></div>
         </div>
-        <p style="margin:10px 0 0 0; font-size: 0.65rem; opacity: 0.7;">系統辨識碼: <span id="displayId">--</span></p>
     </div>
 
     <div class="card">
-        <h3>➕ 新增就診/健康紀錄</h3>
+        <h3>➕ 新增就診紀錄</h3>
         
-        <label>📸 上傳檢查單/藥袋 (AI 自動填寫)</label>
+        <label>📸 上傳檢查單/藥袋照片</label>
         <input type="file" id="fileInput" accept="image/*" capture="camera" onchange="previewFile()">
         <img id="previewImage" src="" alt="預覽圖">
-        <button id="aiBtn" class="btn btn-ai" onclick="uploadToAi()" disabled>✨ 使用 Gemini AI 辨識照片</button>
-        <div id="loadingHint" class="loading-text">🚀 正在進行 AI 醫療影像分析，請勿關閉視窗...</div>
 
-        <hr style="border:0; border-top:1px solid #eee; margin: 20px 0;">
-
-        <label>就診日期 (Date)</label>
+        <label>就診日期</label>
         <input type="date" id="Date">
 
-        <label>就診醫院 (Clinic_Name)</label>
-        <input type="text" id="Clinic_Name" placeholder="醫院名稱">
+        <label>就診醫院</label>
+        <input type="text" id="Clinic_Name" placeholder="例如：中興動物醫院">
 
-        <label>體重 (Weight - kg)</label>
+        <label>體重 (kg)</label>
         <input type="number" id="Weight" step="0.1" placeholder="0.0">
 
-        <label>醫師診斷 (Diagnosis)</label>
-        <textarea id="Diagnosis" rows="2" placeholder="醫師的初步診斷"></textarea>
+        <label>醫師診斷</label>
+        <textarea id="Diagnosis" rows="2" placeholder="醫師的診斷或檢查結果"></textarea>
 
-        <label>醫師叮囑 (Doctor_Advice)</label>
-        <textarea id="Doctor_Advice" rows="2" placeholder="醫生的建議事項"></textarea>
-
-        <label>用藥紀錄 (Medication_Taken)</label>
-        <input type="text" id="Medication_Taken" placeholder="處方箋或藥名">
+        <label>醫師叮囑與用藥</label>
+        <textarea id="Doctor_Advice" rows="2" placeholder="醫師建議與用藥說明"></textarea>
 
         <button class="btn" id="saveBtn" onclick="saveData()">💾 儲存並同步至雲端</button>
     </div>
 
     <div class="card">
-        <h3>📅 歷史健康紀錄</h3>
-        <div id="historyList" style="color:#999; font-size: 0.9rem;">正在載入歷史資料...</div>
+        <h3>📅 歷史就診紀錄 (文件式)</h3>
+        <div id="historyList" class="history-container">
+            <div class="loading-text">正在從雲端同步歷史資料...</div>
+        </div>
     </div>
 
 <script>
-    // --- 核心設定區 ---
     const liffId = "2008190733-fod2tVTS"; 
-    const makeWebhookUrl = "https://hook.us2.make.com/4w3lf7uwjldhz7flcg2dpkpckwaxoz2p";
+    const saveWebhookUrl = "https://hook.us2.make.com/4w3lf7uwjldhz7flcg2dpkpckwaxoz2p";
+    // 已更新為您的新讀取網址
+    const fetchHistoryWebhookUrl = "https://hook.us2.make.com/imjmhwgb72htsyiammee3svrgl9faczx"; 
+
     let currentPetId = "";
-    let userLineId = "";
 
     async function main() {
         try {
@@ -93,19 +92,18 @@
             if (!liff.isLoggedIn()) {
                 liff.login();
             } else {
-                const profile = await liff.getProfile();
-                userLineId = profile.userId; 
-                
                 const urlParams = new URLSearchParams(window.location.search);
                 currentPetId = urlParams.get('id');
 
                 if (currentPetId) {
                     document.getElementById('displayId').innerText = currentPetId;
+                    document.getElementById('p_Name').innerText = "🐾 寵物 ID: " + currentPetId;
                     document.getElementById('Date').value = new Date().toISOString().split('T')[0];
-                    fetchPetBasicInfo(currentPetId); 
+                    
+                    // 執行讀取歷史紀錄
                     fetchHistory(currentPetId);
                 } else {
-                    document.getElementById('historyList').innerText = "請掃描 QR Code 進入系統";
+                    document.getElementById('historyList').innerHTML = '<div class="loading-text">請掃描正確的 QR Code 進入</div>';
                 }
             }
         } catch (err) {
@@ -113,119 +111,100 @@
         }
     }
 
-    // 預覽照片
     function previewFile() {
         const file = document.getElementById('fileInput').files[0];
         const preview = document.getElementById('previewImage');
-        const aiBtn = document.getElementById('aiBtn');
         const reader = new FileReader();
         reader.onloadend = function () {
             preview.src = reader.result;
             preview.style.display = 'block';
-            aiBtn.disabled = false;
         }
         if (file) reader.readAsDataURL(file);
     }
 
-    // 抓取基本資料 (由 Make.com 的另一組 Scenario 回傳)
-    function fetchPetBasicInfo(id) {
-        console.log("正在請求寵物資訊:", id);
-        // 此處目前先保持載入狀態，待後續 Scenario 完成後對接
-        document.getElementById('p_Name').innerText = "🐾 寵物 ID: " + id;
-    }
-
-    // AI 辨識功能：將照片轉為 Base64 並傳送到 Make.com
-    async function uploadToAi() {
-        const fileInput = document.getElementById('fileInput');
-        const aiBtn = document.getElementById('aiBtn');
-        const loadingHint = document.getElementById('loadingHint');
-        
-        if (!fileInput.files[0]) {
-            alert("請先選擇或拍攝一張照片！");
-            return;
-        }
-
-        aiBtn.disabled = true;
-        aiBtn.innerText = "🚀 AI 辨識中...";
-        loadingHint.style.display = "block";
-
-        const reader = new FileReader();
-        reader.readAsDataURL(fileInput.files[0]);
-        
-        reader.onload = async function () {
-            const base64Data = reader.result; 
-
-            const payload = {
-                PetID: currentPetId,
-                PhotoURL: base64Data, // 傳送照片代碼
-                isAI: true,           // 標記為 AI 流程
-                Date: document.getElementById('Date').value // 同步日期
-            };
-
-            try {
-                const response = await fetch(makeWebhookUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (response.ok) {
-                    alert("✅ 影像分析請求已發送！\n請稍候 5-10 秒等待 AI 辨識回傳結果至您的雲端資料庫。");
-                } else {
-                    throw new Error("Make.com 回應錯誤");
-                }
-            } catch (err) {
-                alert("辨識請求失敗，請檢查網路或 Make.com 設定");
-                console.error(err);
-            } finally {
-                aiBtn.disabled = false;
-                aiBtn.innerText = "✨ 使用 Gemini AI 辨識照片";
-                loadingHint.style.display = "none";
-            }
-        };
-    }
-
-    // 儲存資料到雲端 (一般存檔功能)
     function saveData() {
+        const fileInput = document.getElementById('fileInput');
         const saveBtn = document.getElementById('saveBtn');
         saveBtn.disabled = true;
-        saveBtn.innerText = "傳送中...";
+        saveBtn.innerText = "正在儲存至雲端...";
 
+        const file = fileInput.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = function() { sendToMake(reader.result); };
+        } else {
+            sendToMake(""); 
+        }
+    }
+
+    async function sendToMake(base64Image) {
         const data = {
-            RecordID: "REC" + Date.now(),
             PetID: currentPetId,
-            OwnerLINEID: userLineId, 
             Date: document.getElementById('Date').value,
             Weight: document.getElementById('Weight').value,
-            Medication_Taken: document.getElementById('Medication_Taken').value,
             Clinic_Name: document.getElementById('Clinic_Name').value,
-            Doctor_Advice: document.getElementById('Doctor_Advice').value,
             Diagnosis: document.getElementById('Diagnosis').value,
-            PhotoURL: "",
-            isAI: false // 標記為一般手動儲存
+            Doctor_Advice: document.getElementById('Doctor_Advice').value,
+            PhotoURL: base64Image
         };
 
-        fetch(makeWebhookUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-        })
-        .then(res => {
-            if(res.ok) {
+        try {
+            const response = await fetch(saveWebhookUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            if (response.ok) {
                 alert("🎉 健康紀錄已儲存！");
                 location.reload();
             }
-        })
-        .catch(err => {
-            alert("儲存失敗，請檢查網路連線");
-            saveBtn.disabled = false;
-            saveBtn.innerText = "💾 儲存並同步至雲端";
-        });
+        } catch (err) {
+            alert("儲存失敗，請確認網路連線");
+            document.getElementById('saveBtn').disabled = false;
+        }
     }
 
-    // 載入歷史紀錄 (預留)
-    function fetchHistory(id) {
-        document.getElementById('historyList').innerText = "暫無歷史資料";
+    // 讀取歷史資料並渲染
+    async function fetchHistory(id) {
+        const listDiv = document.getElementById('historyList');
+        try {
+            // 發送 GET 請求，帶入 id 參數
+            const response = await fetch(`${fetchHistoryWebhookUrl}?id=${id}`);
+            const historyData = await response.json();
+            
+            if (!historyData || historyData.length === 0) {
+                listDiv.innerHTML = '<div class="loading-text">📭 目前尚無就診紀錄</div>';
+                return;
+            }
+
+            // 依照日期排序 (最新的在最上面)
+            historyData.sort((a, b) => new Date(b.Date) - new Date(a.Date));
+
+            let htmlContent = "";
+            historyData.forEach(item => {
+                htmlContent += `
+                    <div class="history-item">
+                        <div class="h-date">📅 就診日期：${item.Date || '未填寫'}</div>
+                        <div class="h-hospital">🏥 ${item.Clinic_Name || '未註明醫院'}</div>
+                        <div class="h-diag">
+                            <b>診斷：</b>${item.Diagnosis || '無紀錄'}<br>
+                            <b>叮囑：</b>${item.Doctor_Advice || '無紀錄'}
+                        </div>
+                        <div class="h-meta">
+                            <span>⚖️ 體重：${item.Weight || '--'} kg</span>
+                            ${item.PhotoURL ? `<a href="${item.PhotoURL}" target="_blank" class="h-photo-btn">🖼️ 查看藥袋照片</a>` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+            listDiv.innerHTML = htmlContent;
+
+        } catch (err) {
+            listDiv.innerHTML = '<div class="loading-text">❌ 無法載入歷史紀錄，請檢查 Webhook 或網路</div>';
+            console.error(err);
+        }
     }
 
     main();
