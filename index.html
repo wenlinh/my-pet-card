@@ -16,13 +16,14 @@
         h3 { border-left: 5px solid var(--primary); padding-left: 10px; font-size: 1.1rem; margin: 0 0 15px 0; }
         label { display: block; margin-top: 12px; font-weight: bold; font-size: 0.85rem; color: #666; }
         input, textarea { width: 100%; padding: 12px; margin-top: 5px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 1rem; }
-        .btn { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 10px; width: 100%; font-size: 1.1rem; font-weight: bold; cursor: pointer; margin-top: 20px; }
+        .btn { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 10px; width: 100%; font-size: 1.1rem; font-weight: bold; cursor: pointer; margin-top: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         .btn:disabled { background: #ccc; }
         .history-item { border-bottom: 1px solid #eee; padding: 15px 0; }
         .h-date { color: var(--primary); font-weight: bold; font-size: 0.85rem; }
         .h-diag { font-size: 0.9rem; color: #555; background: #f8f9fa; padding: 12px; border-radius: 8px; margin-top: 8px; border-left: 4px solid #ddd; }
-        .allergy-tag { background: #fee2e2; color: #dc2626; padding: 2px 6px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; margin-right: 5px; }
         .h-photo-btn { color: var(--accent); text-decoration: none; font-weight: bold; border: 1px solid var(--accent); padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; display: inline-block; margin-top: 5px; }
+        .allergy-tag { background: #fee2e2; color: #dc2626; padding: 2px 6px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; margin-right: 5px; }
+        .loading-text { text-align: center; color: #999; font-size: 0.9rem; padding: 20px; }
     </style>
 </head>
 <body>
@@ -64,14 +65,14 @@
         <label>就診醫院與診斷</label>
         <input type="text" id="Clinic_Name" placeholder="醫院名稱">
         <textarea id="Diagnosis" rows="2" placeholder="診斷結果"></textarea>
-        <textarea id="Doctor_Advice" rows="2" placeholder="醫囑用藥"></textarea>
+        <textarea id="Doctor_Advice" rows="2" placeholder="醫囑內容"></textarea>
 
         <button class="btn" id="saveBtn" onclick="saveData()">💾 儲存並更新雲端卡片</button>
     </div>
 
     <div class="card">
         <h3>📅 歷史就診紀錄</h3>
-        <div id="historyList">讀取紀錄中...</div>
+        <div id="historyList" class="loading-text">讀取紀錄中...</div>
     </div>
 
 <script>
@@ -91,6 +92,8 @@
                 if (currentPetId) {
                     document.getElementById('displayId').innerText = currentPetId;
                     fetchHistory(currentPetId);
+                } else {
+                    document.getElementById('historyList').innerHTML = "⚠️ 請使用正確 QR Code 進入";
                 }
             }
         } catch (err) { console.error(err); }
@@ -141,44 +144,53 @@
         const listDiv = document.getElementById('historyList');
         try {
             const response = await fetch(`${fetchHistoryWebhookUrl}?id=${id}`);
-            const historyData = await response.json();
+            const data = await response.json(); 
             listDiv.innerHTML = "";
-            if (!historyData || historyData.length === 0) {
-                document.getElementById('p_Display_Name').innerText = "🐾 新寵物";
-                listDiv.innerHTML = "📭 尚無歷史紀錄"; return;
+
+            // 1. 處理寵物基本資訊 (petInfo)
+            if (data.petInfo) {
+                const info = data.petInfo;
+                // 自動對應 Key 名稱 (相容 Excel 標題或編號)
+                document.getElementById('p_Display_Name').innerText = "🐾 " + (info.PetName || info["1"] || "寵物");
+                document.getElementById('p_Display_Breed').innerText = info.Breed || info.PetBreed || info["4"] || "--";
+                document.getElementById('p_Display_Birth').innerText = info["Birth Year"] || info.PetBirth || info["3"] || "--";
             }
 
-            // 智能欄位映射
-            const getField = (item, keys) => {
-                for(let k of keys) { if(item[k]) return item[k]; }
-                return "";
-            };
+            // 2. 處理就診歷史紀錄 (history)
+            const records = data.history || [];
+            if (records.length === 0) {
+                listDiv.innerHTML = '<div class="loading-text">📭 尚無就診紀錄</div>';
+                return;
+            }
 
+            // 彙整過敏原 (從 history 中提取)
             let allAllergies = new Set();
-            historyData.forEach(item => {
-                const a = getField(item, ["Allergies", "Allergy"]);
-                if(a) a.split(/[,，、\s]+/).forEach(v => allAllergies.add(v));
+            records.forEach(item => {
+                const a = item.Allergies || item.Allergy || "";
+                if(a) a.split(/[,，、\s]+/).forEach(v => allAllergies.add(v.trim()));
             });
+            document.getElementById('p_Display_Allergy').innerHTML = allAllergies.size > 0 
+                ? Array.from(allAllergies).map(a => `<span class="allergy-tag">${a}</span>`).join("") 
+                : "尚無紀錄";
 
-            const latest = historyData.sort((a,b) => new Date(b.Date) - new Date(a.Date))[0];
-            document.getElementById('p_Display_Name').innerText = "🐾 " + getField(latest, ["PetName", "1"]);
-            document.getElementById('p_Display_Breed').innerText = getField(latest, ["Breed", "PetBreed"]) || "--";
-            document.getElementById('p_Display_Birth').innerText = getField(latest, ["Birth Year", "PetBirth"]) || "--";
-            document.getElementById('p_Display_Allergy').innerHTML = Array.from(allAllergies).map(a => `<span class="allergy-tag">${a}</span>`).join(" ") || "無";
-
-            historyData.forEach(item => {
+            // 渲染列表
+            records.forEach(item => {
                 listDiv.innerHTML += `
                     <div class="history-item">
-                        <div class="h-date">📅 ${getField(item, ["Date", "2"])} (體重: ${getField(item, ["Weight", "3"])}kg)</div>
+                        <div class="h-date">📅 ${item.Date || '未填'} (體重: ${item.Weight || '--'}kg)</div>
                         <div class="h-diag">
-                            <b>🏥 醫院：</b>${getField(item, ["Clinic_Name"])}<br>
-                            <b>👨‍⚕️ 診斷：</b>${getField(item, ["Diagnosis"])}
+                            <b>🏥 醫院：</b>${item.Clinic_Name || '未註明'}<br>
+                            <b>👨‍⚕️ 診斷：</b>${item.Diagnosis || '無紀錄'}<br>
+                            <b>💊 醫囑：</b>${item.Doctor_Advice || '無紀錄'}
                         </div>
-                        ${getField(item, ["PhotoURL"]) ? `<a href="${getField(item, ["PhotoURL"])}" target="_blank" class="h-photo-btn">🖼️ 查看藥袋照片</a>` : ''}
+                        ${item.PhotoURL ? `<a href="${item.PhotoURL}" target="_blank" class="h-photo-btn">🖼️ 查看藥袋照片</a>` : ''}
                     </div>
                 `;
             });
-        } catch (err) { listDiv.innerHTML = "❌ 讀取失敗"; }
+        } catch (err) { 
+            console.error("解析失敗:", err);
+            listDiv.innerHTML = '<div class="loading-text">❌ 資料載入失敗，請確認 Webhook 設定</div>'; 
+        }
     }
     main();
 </script>
