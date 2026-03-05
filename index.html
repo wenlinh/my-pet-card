@@ -17,7 +17,6 @@
         label { display: block; margin-top: 12px; font-weight: bold; font-size: 0.85rem; color: #666; }
         input, textarea { width: 100%; padding: 12px; margin-top: 5px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 1rem; }
         .btn { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 10px; width: 100%; font-size: 1.1rem; font-weight: bold; cursor: pointer; margin-top: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .btn:disabled { background: #ccc; }
         .history-item { border-bottom: 1px solid #eee; padding: 15px 0; }
         .h-date { color: var(--primary); font-weight: bold; font-size: 0.85rem; }
         .h-diag { font-size: 0.9rem; color: #555; background: #f8f9fa; padding: 12px; border-radius: 8px; margin-top: 8px; border-left: 4px solid #ddd; }
@@ -70,7 +69,7 @@
 
     <div class="card">
         <h3>📅 歷史就診紀錄</h3>
-        <div id="historyList">讀取紀錄中...</div>
+        <div id="historyList" style="text-align:center; padding:20px; color:#999;">讀取紀錄中...</div>
     </div>
 
 <script>
@@ -150,9 +149,10 @@
             listDiv.innerHTML = "";
 
             if (data.petInfo) {
-                document.getElementById('p_Display_Name').innerText = "🐾 " + (data.petInfo.PetName || "寵物");
-                document.getElementById('p_Display_Breed').innerText = data.petInfo.Breed || "--";
-                document.getElementById('p_Display_Birth').innerText = data.petInfo.BirthYear || "--";
+                const info = data.petInfo;
+                document.getElementById('p_Display_Name').innerText = "🐾 " + (info.PetName || "寵物");
+                document.getElementById('p_Display_Breed').innerText = info.Breed || "--";
+                document.getElementById('p_Display_Birth').innerText = info["Birth Year"] || "--";
             }
 
             const records = data.history || [];
