@@ -183,19 +183,27 @@
                 return;
             }
 
-            // --- 自動彙整邏輯 ---
+            // 對齊 Excel 欄位 (支援文字 Key 與 數字 Key)
+            // 根據 image_9f21de.png：1=ID, 2=日期, 3=體重, 4=醫院, 5=診斷/過敏原, 6=醫囑, 7=照片
+            const getName = (item) => item.PetName || item["8"] || "寵物"; // 假設名字在第8欄
+            const getBreed = (item) => item.Breed || item.PetBreed || item["9"] || "--";
+            const getBirth = (item) => item["Birth Year"] || item.PetBirth || item["10"] || "--";
+            const getDate = (item) => item.Date || item["2"] || "未填日期";
+            const getAllergy = (item) => item.Allergies || item.Allergy || item["5"] || "";
+
             let allAllergies = new Set();
             historyData.forEach(item => {
-                if(item.Allergies) { 
-                    item.Allergies.split(/[,，、\s]+/).forEach(a => { if(a) allAllergies.add(a); });
+                const allergyVal = getAllergy(item);
+                if(allergyVal) { 
+                    allergyVal.split(/[,，、\s]+/).forEach(a => { if(a) allAllergies.add(a); });
                 }
             });
 
-            // 更新頂部資訊 (使用您的 Excel 實際欄位名稱)
-            const latest = historyData.sort((a, b) => new Date(b.Date) - new Date(a.Date))[0];
-            document.getElementById('p_Display_Name').innerText = "🐾 " + (latest.PetName || "寵物");
-            document.getElementById('p_Display_Breed').innerText = latest.Breed || "--";
-            document.getElementById('p_Display_Birth').innerText = latest['Birth Year'] || "--";
+            // 更新頂部資訊
+            const latest = historyData.sort((a, b) => new Date(getDate(b)) - new Date(getDate(a)))[0];
+            document.getElementById('p_Display_Name').innerText = "🐾 " + getName(latest);
+            document.getElementById('p_Display_Breed').innerText = getBreed(latest);
+            document.getElementById('p_Display_Birth').innerText = getBirth(latest);
             document.getElementById('p_Display_Allergy').innerHTML = allAllergies.size > 0 
                 ? Array.from(allAllergies).map(a => `<span class="allergy-tag">${a}</span>`).join(" ")
                 : "無過敏紀錄";
@@ -204,15 +212,15 @@
             historyData.forEach(item => {
                 listDiv.innerHTML += `
                     <div class="history-item">
-                        <div class="h-petinfo">🐶 ${item.PetName || '寵物'} (${item.Breed || '品種未填'})</div>
-                        <div class="h-date">📅 ${item.Date || ''} (體重: ${item.Weight || '--'}kg)</div>
-                        <div class="h-hospital">🏥 ${item.Clinic_Name || '未註明醫院'}</div>
+                        <div class="h-petinfo">🐶 ${getName(item)} (${getBreed(item)})</div>
+                        <div class="h-date">📅 ${getDate(item)} (體重: ${item.Weight || item["3"] || '--'}kg)</div>
+                        <div class="h-hospital">🏥 ${item.Clinic_Name || item["4"] || '未註明醫院'}</div>
                         <div class="h-diag">
-                            ${item.Allergies ? `<p style="margin-top:0;"><b style="color:#dc2626;">⚠️ 發現過敏原：</b>${item.Allergies}</p>` : ''}
-                            <b>醫師診斷：</b><br>${item.Diagnosis || '無紀錄'}<br><br>
-                            <b>醫囑用藥：</b><br>${item.Doctor_Advice || '無紀錄'}
+                            ${getAllergy(item) ? `<p style="margin-top:0;"><b style="color:#dc2626;">⚠️ 發現過敏原：</b>${getAllergy(item)}</p>` : ''}
+                            <b>醫師診斷：</b><br>${item.Diagnosis || item["5"] || '無紀錄'}<br><br>
+                            <b>醫囑用藥：</b><br>${item.Doctor_Advice || item["6"] || '無紀錄'}
                         </div>
-                        ${item.PhotoURL ? `<a href="${item.PhotoURL}" target="_blank" class="h-photo-btn">🖼️ 查看藥袋照片</a>` : ''}
+                        ${(item.PhotoURL || item["7"]) ? `<a href="${item.PhotoURL || item["7"]}" target="_blank" class="h-photo-btn">🖼️ 查看藥袋照片</a>` : ''}
                     </div>
                 `;
             });
