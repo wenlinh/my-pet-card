@@ -65,7 +65,7 @@
         <label>就診醫院與診斷</label>
         <input type="text" id="Clinic_Name" placeholder="醫院名稱">
         <textarea id="Diagnosis" rows="2" placeholder="診斷結果"></textarea>
-        <textarea id="Doctor_Advice" rows="2" placeholder="醫囑內容"></textarea>
+        <textarea id="Doctor_Advice" rows="2" placeholder="醫囑用藥"></textarea>
 
         <button class="btn" id="saveBtn" onclick="saveData()">💾 儲存並更新雲端卡片</button>
     </div>
@@ -82,6 +82,13 @@
 
     let currentPetId = "";
 
+    // 處理 Excel 日期序列的轉換 (46086 -> 2026-03-05)
+    function formatExcelDate(serial) {
+        if (!serial || isNaN(serial) || serial < 1000) return serial || "未填";
+        const date = new Date((serial - 25569) * 86400 * 1000);
+        return date.toISOString().split('T')[0];
+    }
+
     async function main() {
         try {
             await liff.init({ liffId: liffId });
@@ -93,7 +100,7 @@
                     document.getElementById('displayId').innerText = currentPetId;
                     fetchHistory(currentPetId);
                 } else {
-                    document.getElementById('historyList').innerHTML = "⚠️ 請使用正確 QR Code 進入";
+                    document.getElementById('historyList').innerHTML = "⚠️ 請掃描 QR Code 進入";
                 }
             }
         } catch (err) { console.error(err); }
@@ -109,7 +116,7 @@
 
     function saveData() {
         const petName = document.getElementById('PetName').value;
-        if (!petName) { alert("請填寫寵物名字！"); return; }
+        if (!petName) { alert("請填寫名字！"); return; }
         const saveBtn = document.getElementById('saveBtn');
         saveBtn.disabled = true; saveBtn.innerText = "正在上傳雲端...";
         const file = document.getElementById('fileInput').files[0];
@@ -147,23 +154,20 @@
             const data = await response.json(); 
             listDiv.innerHTML = "";
 
-            // 1. 處理寵物基本資訊 (petInfo)
+            // 1. 更新頂部卡片 (petInfo 資料)
             if (data.petInfo) {
-                const info = data.petInfo;
-                // 自動對應 Key 名稱 (相容 Excel 標題或編號)
-                document.getElementById('p_Display_Name').innerText = "🐾 " + (info.PetName || info["1"] || "寵物");
-                document.getElementById('p_Display_Breed').innerText = info.Breed || info.PetBreed || info["4"] || "--";
-                document.getElementById('p_Display_Birth').innerText = info["Birth Year"] || info.PetBirth || info["3"] || "--";
+                document.getElementById('p_Display_Name').innerText = "🐾 " + (data.petInfo.PetName || "寵物");
+                document.getElementById('p_Display_Breed').innerText = data.petInfo.Breed || "--";
+                document.getElementById('p_Display_Birth').innerText = data.petInfo.BirthYear || "--";
             }
 
-            // 2. 處理就診歷史紀錄 (history)
+            // 2. 渲染歷史清單 (history 資料)
             const records = data.history || [];
             if (records.length === 0) {
-                listDiv.innerHTML = '<div class="loading-text">📭 尚無就診紀錄</div>';
-                return;
+                listDiv.innerHTML = "📭 尚無就診紀錄"; return;
             }
 
-            // 彙整過敏原 (從 history 中提取)
+            // 彙整過敏原 (從歷史紀錄中找 Allergies)
             let allAllergies = new Set();
             records.forEach(item => {
                 const a = item.Allergies || item.Allergy || "";
@@ -173,23 +177,23 @@
                 ? Array.from(allAllergies).map(a => `<span class="allergy-tag">${a}</span>`).join("") 
                 : "尚無紀錄";
 
-            // 渲染列表
+            // 渲染清單
             records.forEach(item => {
                 listDiv.innerHTML += `
                     <div class="history-item">
-                        <div class="h-date">📅 ${item.Date || '未填'} (體重: ${item.Weight || '--'}kg)</div>
+                        <div class="h-date">📅 ${formatExcelDate(item.Date)} (體重: ${item.Weight || '--'}kg)</div>
                         <div class="h-diag">
                             <b>🏥 醫院：</b>${item.Clinic_Name || '未註明'}<br>
                             <b>👨‍⚕️ 診斷：</b>${item.Diagnosis || '無紀錄'}<br>
                             <b>💊 醫囑：</b>${item.Doctor_Advice || '無紀錄'}
                         </div>
-                        ${item.PhotoURL ? `<a href="${item.PhotoURL}" target="_blank" class="h-photo-btn">🖼️ 查看藥袋照片</a>` : ''}
+                        ${item.PhotoURL ? `<a href="${item.PhotoURL}" target="_blank" class="h-photo-btn">🖼️ 查看照片</a>` : ''}
                     </div>
                 `;
             });
         } catch (err) { 
-            console.error("解析失敗:", err);
-            listDiv.innerHTML = '<div class="loading-text">❌ 資料載入失敗，請確認 Webhook 設定</div>'; 
+            console.error(err);
+            listDiv.innerHTML = "❌ 資料載入失敗"; 
         }
     }
     main();
