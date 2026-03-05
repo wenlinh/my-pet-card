@@ -6,7 +6,7 @@
     <title>Suisa 寵物雲端健康卡</title>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <style>
-        :root { --primary: #00b900; --bg: #f4f7f6; --text: #333; --accent: #f39c12; --danger: #e74c3c; }
+        :root { --primary: #00b900; --bg: #f4f7f6; --text: #333; --accent: #f39c12; }
         body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; }
         .card { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); margin-bottom: 20px; }
         .pet-header { background: linear-gradient(135deg, #00b900 0%, #008a00 100%); color: white; border: none; }
@@ -16,17 +16,13 @@
         h3 { border-left: 5px solid var(--primary); padding-left: 10px; font-size: 1.1rem; margin: 0 0 15px 0; }
         label { display: block; margin-top: 12px; font-weight: bold; font-size: 0.85rem; color: #666; }
         input, textarea { width: 100%; padding: 12px; margin-top: 5px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 1rem; }
-        .btn { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 10px; width: 100%; font-size: 1.1rem; font-weight: bold; cursor: pointer; margin-top: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .btn:disabled { background: #ccc; cursor: not-allowed; }
+        .btn { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 10px; width: 100%; font-size: 1.1rem; font-weight: bold; cursor: pointer; margin-top: 20px; }
+        .btn:disabled { background: #ccc; }
         .history-item { border-bottom: 1px solid #eee; padding: 15px 0; }
-        .history-item:last-child { border-bottom: none; }
-        .h-date { color: var(--primary); font-weight: bold; font-size: 0.85rem; margin-bottom: 4px; }
-        .h-petinfo { font-size: 1.1rem; font-weight: bold; color: #333; margin-bottom: 4px; }
-        .h-diag { font-size: 0.9rem; color: #555; background: #f8f9fa; padding: 12px; border-radius: 8px; line-height: 1.5; border-left: 4px solid #ddd; margin-bottom: 10px; }
-        .h-photo-btn { color: var(--accent); text-decoration: none; font-weight: bold; border: 1px solid var(--accent); padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; display: inline-block; margin-top: 5px; }
+        .h-date { color: var(--primary); font-weight: bold; font-size: 0.85rem; }
+        .h-diag { font-size: 0.9rem; color: #555; background: #f8f9fa; padding: 12px; border-radius: 8px; margin-top: 8px; border-left: 4px solid #ddd; }
         .allergy-tag { background: #fee2e2; color: #dc2626; padding: 2px 6px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; margin-right: 5px; }
-        #previewImage { width: 100%; border-radius: 10px; margin-top: 10px; display: none; border: 1px solid #ddd; }
-        .loading-text { text-align: center; color: #999; font-size: 0.9rem; padding: 20px; }
+        .h-photo-btn { color: var(--accent); text-decoration: none; font-weight: bold; border: 1px solid var(--accent); padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; display: inline-block; margin-top: 5px; }
     </style>
 </head>
 <body>
@@ -40,20 +36,18 @@
             <div class="info-item"><b>資料狀態</b><span>雲端同步中</span></div>
         </div>
         <div class="allergy-box">
-            <b>⚠️ 過敏原彙整：</b>
-            <span id="p_Display_Allergy">尚無紀錄</span>
+            <b>⚠️ 過敏原彙整：</b> <span id="p_Display_Allergy">尚無紀錄</span>
         </div>
     </div>
 
     <div class="card">
         <h3>➕ 新增就診紀錄</h3>
-        
         <label>📸 上傳紀錄照片</label>
         <input type="file" id="fileInput" accept="image/*" capture="camera" onchange="previewFile()">
-        <img id="previewImage" src="">
+        <img id="previewImage" src="" style="width:100%; display:none; margin-top:10px; border-radius:10px;">
 
         <label>寵物名字 (必填)</label>
-        <input type="text" id="PetName" placeholder="例如：咪咪">
+        <input type="text" id="PetName" placeholder="例如：毛毛">
 
         <label>品種 / 出生日期</label>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
@@ -61,34 +55,23 @@
             <input type="date" id="PetBirth">
         </div>
 
-        <label>本次發現的過敏原 (若有)</label>
-        <input type="text" id="Allergy" placeholder="例如：鱈魚、盤尼西林">
-
-        <hr style="border:0; border-top:1px solid #eee; margin: 20px 0;">
-
-        <label>就診日期 / 體重</label>
+        <label>過敏原 / 體重</label>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-            <input type="date" id="Date">
+            <input type="text" id="Allergy" placeholder="例如：鱈魚">
             <input type="number" id="Weight" step="0.1" placeholder="kg">
         </div>
 
-        <label>就診醫院</label>
+        <label>就診醫院與診斷</label>
         <input type="text" id="Clinic_Name" placeholder="醫院名稱">
-
-        <label>醫師診斷</label>
         <textarea id="Diagnosis" rows="2" placeholder="診斷結果"></textarea>
-
-        <label>醫囑與用藥</label>
-        <textarea id="Doctor_Advice" rows="2" placeholder="醫囑內容"></textarea>
+        <textarea id="Doctor_Advice" rows="2" placeholder="醫囑用藥"></textarea>
 
         <button class="btn" id="saveBtn" onclick="saveData()">💾 儲存並更新雲端卡片</button>
     </div>
 
     <div class="card">
         <h3>📅 歷史就診紀錄</h3>
-        <div id="historyList" class="history-container">
-            <div class="loading-text">讀取紀錄中...</div>
-        </div>
+        <div id="historyList">讀取紀錄中...</div>
     </div>
 
 <script>
@@ -107,10 +90,7 @@
                 currentPetId = urlParams.get('id');
                 if (currentPetId) {
                     document.getElementById('displayId').innerText = currentPetId;
-                    document.getElementById('Date').value = new Date().toISOString().split('T')[0];
                     fetchHistory(currentPetId);
-                } else {
-                    document.getElementById('historyList').innerHTML = '<div class="loading-text">⚠️ 請掃描 QR Code 進入</div>';
                 }
             }
         } catch (err) { console.error(err); }
@@ -126,15 +106,9 @@
 
     function saveData() {
         const petName = document.getElementById('PetName').value;
-        if (!petName) {
-            alert("請填寫寵物名字！");
-            return;
-        }
-
+        if (!petName) { alert("請填寫寵物名字！"); return; }
         const saveBtn = document.getElementById('saveBtn');
-        saveBtn.disabled = true;
-        saveBtn.innerText = "正在上傳雲端...";
-        
+        saveBtn.disabled = true; saveBtn.innerText = "正在上傳雲端...";
         const file = document.getElementById('fileInput').files[0];
         if (file) {
             const reader = new FileReader();
@@ -150,7 +124,7 @@
             PetBreed: document.getElementById('PetBreed').value,
             PetBirth: document.getElementById('PetBirth').value,
             Allergy: document.getElementById('Allergy').value,
-            Date: document.getElementById('Date').value,
+            Date: new Date().toISOString().split('T')[0],
             Weight: document.getElementById('Weight').value,
             Clinic_Name: document.getElementById('Clinic_Name').value,
             Diagnosis: document.getElementById('Diagnosis').value,
@@ -159,13 +133,8 @@
         };
         try {
             await fetch(saveWebhookUrl, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)});
-            alert("✅ 紀錄已成功儲存並同步！");
-            location.reload();
-        } catch (err) { 
-            alert("儲存失敗"); 
-            document.getElementById('saveBtn').disabled = false;
-            document.getElementById('saveBtn').innerText = "💾 儲存並更新雲端卡片";
-        }
+            alert("✅ 紀錄已成功儲存！"); location.reload();
+        } catch (err) { alert("儲存失敗"); document.getElementById('saveBtn').disabled = false; }
     }
 
     async function fetchHistory(id) {
@@ -174,51 +143,42 @@
             const response = await fetch(`${fetchHistoryWebhookUrl}?id=${id}`);
             const historyData = await response.json();
             listDiv.innerHTML = "";
-            
             if (!historyData || historyData.length === 0) {
                 document.getElementById('p_Display_Name').innerText = "🐾 新寵物";
-                listDiv.innerHTML = '<div class="loading-text">📭 尚無歷史紀錄</div>';
-                return;
+                listDiv.innerHTML = "📭 尚無歷史紀錄"; return;
             }
 
-            // 1. 自動彙整過敏原 (讀取所有歷史紀錄中提到 Allergies 的部分)
+            // 智能欄位映射
+            const getField = (item, keys) => {
+                for(let k of keys) { if(item[k]) return item[k]; }
+                return "";
+            };
+
             let allAllergies = new Set();
             historyData.forEach(item => {
-                const allergyVal = item.Allergies || item.Allergy || "";
-                if(allergyVal) { 
-                    allergyVal.split(/[,，、\s]+/).forEach(a => { if(a) allAllergies.add(a); });
-                }
+                const a = getField(item, ["Allergies", "Allergy"]);
+                if(a) a.split(/[,，、\s]+/).forEach(v => allAllergies.add(v));
             });
 
-            // 2. 依照日期排序並取得最新一筆填寫頂部卡片
-            const latest = historyData.sort((a, b) => new Date(b.Date) - new Date(a.Date))[0];
-            document.getElementById('p_Display_Name').innerText = "🐾 " + (latest.PetName || "寵物");
-            document.getElementById('p_Display_Breed').innerText = latest.Breed || latest.PetBreed || "--";
-            document.getElementById('p_Display_Birth').innerText = latest['Birth Year'] || latest.PetBirth || "--";
-            document.getElementById('p_Display_Allergy').innerHTML = allAllergies.size > 0 
-                ? Array.from(allAllergies).map(a => `<span class="allergy-tag">${a}</span>`).join(" ")
-                : "無過敏紀錄";
+            const latest = historyData.sort((a,b) => new Date(b.Date) - new Date(a.Date))[0];
+            document.getElementById('p_Display_Name').innerText = "🐾 " + getField(latest, ["PetName", "1"]);
+            document.getElementById('p_Display_Breed').innerText = getField(latest, ["Breed", "PetBreed"]) || "--";
+            document.getElementById('p_Display_Birth').innerText = getField(latest, ["Birth Year", "PetBirth"]) || "--";
+            document.getElementById('p_Display_Allergy').innerHTML = Array.from(allAllergies).map(a => `<span class="allergy-tag">${a}</span>`).join(" ") || "無";
 
-            // 3. 渲染歷史清單
             historyData.forEach(item => {
                 listDiv.innerHTML += `
                     <div class="history-item">
-                        <div class="h-petinfo">🐶 ${item.PetName || '寵物'} (${item.Breed || item.PetBreed || '品種未填'})</div>
-                        <div class="h-date">📅 ${item.Date || '未填日期'} (體重: ${item.Weight || '--'}kg)</div>
-                        <div class="h-hospital">🏥 ${item.Clinic_Name || '未註明醫院'}</div>
+                        <div class="h-date">📅 ${getField(item, ["Date", "2"])} (體重: ${getField(item, ["Weight", "3"])}kg)</div>
                         <div class="h-diag">
-                            ${(item.Allergies || item.Allergy) ? `<p style="margin-top:0;"><b style="color:#dc2626;">⚠️ 發現過敏原：</b>${item.Allergies || item.Allergy}</p>` : ''}
-                            <b>醫師診斷：</b><br>${item.Diagnosis || '無紀錄'}<br><br>
-                            <b>醫囑用藥：</b><br>${item.Doctor_Advice || '無紀錄'}
+                            <b>🏥 醫院：</b>${getField(item, ["Clinic_Name"])}<br>
+                            <b>👨‍⚕️ 診斷：</b>${getField(item, ["Diagnosis"])}
                         </div>
-                        ${item.PhotoURL ? `<a href="${item.PhotoURL}" target="_blank" class="h-photo-btn">🖼️ 查看藥袋照片</a>` : ''}
+                        ${getField(item, ["PhotoURL"]) ? `<a href="${getField(item, ["PhotoURL"])}" target="_blank" class="h-photo-btn">🖼️ 查看藥袋照片</a>` : ''}
                     </div>
                 `;
             });
-        } catch (err) { 
-            console.error(err);
-            listDiv.innerHTML = '<div class="loading-text">❌ 資料解析失敗，請確認 Aggregator 欄位勾選設定</div>'; 
-        }
+        } catch (err) { listDiv.innerHTML = "❌ 讀取失敗"; }
     }
     main();
 </script>
