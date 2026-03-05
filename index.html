@@ -140,9 +140,7 @@
             const reader = new FileReader();
             reader.readAsDataURL(file);
             reader.onload = () => sendToMake(reader.result);
-        } else { 
-            sendToMake(""); 
-        }
+        } else { sendToMake(""); }
     }
 
     async function sendToMake(base64Image) {
@@ -170,9 +168,6 @@
         }
     }
 
-   <script>
-    // ... (前方的 main, saveData 等函式保持不變)
-
     async function fetchHistory(id) {
         const listDiv = document.getElementById('historyList');
         try {
@@ -186,7 +181,7 @@
                 return;
             }
 
-            // 1. 自動彙整過敏原 (確保對應 Excel 欄位名稱 Allergies)
+            // 1. 自動彙整過敏原 (讀取所有歷史紀錄中提到 Allergies 的部分)
             let allAllergies = new Set();
             historyData.forEach(item => {
                 const allergyVal = item.Allergies || item.Allergy || "";
@@ -195,20 +190,20 @@
                 }
             });
 
-            // 2. 取得最新的一筆紀錄來填寫頂部資訊卡
+            // 2. 依照日期排序並取得最新一筆填寫頂部卡片
             const latest = historyData.sort((a, b) => new Date(b.Date) - new Date(a.Date))[0];
             document.getElementById('p_Display_Name').innerText = "🐾 " + (latest.PetName || "寵物");
-            document.getElementById('p_Display_Breed').innerText = latest.Breed || "--";
-            document.getElementById('p_Display_Birth').innerText = latest['Birth Year'] || "--";
+            document.getElementById('p_Display_Breed').innerText = latest.Breed || latest.PetBreed || "--";
+            document.getElementById('p_Display_Birth').innerText = latest['Birth Year'] || latest.PetBirth || "--";
             document.getElementById('p_Display_Allergy').innerHTML = allAllergies.size > 0 
                 ? Array.from(allAllergies).map(a => `<span class="allergy-tag">${a}</span>`).join(" ")
                 : "無過敏紀錄";
 
-            // 3. 渲染歷史清單 (確保欄位與 Excel 完全一致)
+            // 3. 渲染歷史清單
             historyData.forEach(item => {
                 listDiv.innerHTML += `
                     <div class="history-item">
-                        <div class="h-petinfo">🐶 ${item.PetName || '寵物'} (${item.Breed || '品種未填'})</div>
+                        <div class="h-petinfo">🐶 ${item.PetName || '寵物'} (${item.Breed || item.PetBreed || '品種未填'})</div>
                         <div class="h-date">📅 ${item.Date || '未填日期'} (體重: ${item.Weight || '--'}kg)</div>
                         <div class="h-hospital">🏥 ${item.Clinic_Name || '未註明醫院'}</div>
                         <div class="h-diag">
@@ -222,7 +217,7 @@
             });
         } catch (err) { 
             console.error(err);
-            listDiv.innerHTML = '<div class="loading-text">❌ 資料解析失敗，請確認 Aggregator 欄位設定</div>'; 
+            listDiv.innerHTML = '<div class="loading-text">❌ 資料解析失敗，請確認 Aggregator 欄位勾選設定</div>'; 
         }
     }
     main();
