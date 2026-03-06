@@ -16,22 +16,23 @@
         h3 { border-left: 5px solid var(--primary); padding-left: 10px; font-size: 1.1rem; margin: 0 0 15px 0; }
         label { display: block; margin-top: 12px; font-weight: bold; font-size: 0.85rem; color: #666; }
         input, textarea { width: 100%; padding: 12px; margin-top: 5px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 1rem; }
-        .btn { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 10px; width: 100%; font-size: 1.1rem; font-weight: bold; cursor: pointer; margin-top: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .btn { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 10px; width: 100%; font-size: 1.1rem; font-weight: bold; cursor: pointer; margin-top: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: 0.3s; }
+        .btn:active { transform: scale(0.98); opacity: 0.8; }
         .history-item { border-bottom: 1px solid #eee; padding: 15px 0; }
         .h-date { color: var(--primary); font-weight: bold; font-size: 0.85rem; }
-        .h-diag { font-size: 0.9rem; color: #555; background: #f8f9fa; padding: 12px; border-radius: 8px; margin-top: 8px; border-left: 4px solid #ddd; }
+        .h-diag { font-size: 0.9rem; color: #555; background: #f8f9fa; padding: 12px; border-radius: 8px; margin-top: 8px; border-left: 4px solid #ddd; line-height: 1.5; }
         .allergy-tag { background: #fee2e2; color: #dc2626; padding: 2px 6px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; margin-right: 5px; }
     </style>
 </head>
 <body>
 
     <div class="card pet-header">
-        <h2 id="p_Display_Name" style="margin:0;">🐾 載入中...</h2>
+        <h2 id="p_Display_Name" style="margin:0;">🐾 讀取資料中...</h2>
         <div class="info-grid">
             <div class="info-item"><b>品種</b><span id="p_Display_Breed">--</span></div>
             <div class="info-item"><b>出生日期</b><span id="p_Display_Birth">--</span></div>
             <div class="info-item"><b>寵物 ID</b><span id="displayId">--</span></div>
-            <div class="info-item"><b>資料狀態</b><span>雲端同步中</span></div>
+            <div class="info-item"><b>資料狀態</b><span id="syncStatus">連線中</span></div>
         </div>
         <div class="allergy-box">
             <b>⚠️ 過敏原彙整：</b> <span id="p_Display_Allergy">尚無紀錄</span>
@@ -55,7 +56,7 @@
 
         <label>過敏原 / 體重</label>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-            <input type="text" id="Allergy" placeholder="例如：鱈魚">
+            <input type="text" id="Allergy" placeholder="過敏原">
             <input type="number" id="Weight" step="0.1" placeholder="kg">
         </div>
 
@@ -79,10 +80,14 @@
 
     let currentPetId = "";
 
-    function formatExcelDate(serial) {
-        if (!serial || isNaN(serial) || serial < 1000) return serial || "未填";
-        const date = new Date((serial - 25569) * 86400 * 1000);
-        return date.toISOString().split('T')[0];
+    // 容錯日期處理：支援 Excel 序列與 ISO 字串
+    function formatExcelDate(val) {
+        if (!val || val === "null") return "未填";
+        if (!isNaN(val) && val > 40000) {
+            const date = new Date((val - 25569) * 86400 * 1000);
+            return date.toISOString().split('T')[0];
+        }
+        return val.toString().split('T')[0];
     }
 
     async function main() {
@@ -143,45 +148,63 @@
 
     async function fetchHistory(id) {
         const listDiv = document.getElementById('historyList');
+        const syncStatus = document.getElementById('syncStatus');
         try {
             const response = await fetch(`${fetchHistoryWebhookUrl}?id=${id}`);
             const data = await response.json(); 
             listDiv.innerHTML = "";
 
-            if (data.petInfo) {
-                const info = data.petInfo;
-                document.getElementById('p_Display_Name').innerText = "🐾 " + (info.PetName || "寵物");
-                document.getElementById('p_Display_Breed').innerText = info.Breed || "--";
-                document.getElementById('p_Display_Birth').innerText = info["Birth Year"] || "--";
-            }
+            // 1. 頂部資訊容錯 (處理文字 Key 與 數字索引 "1","2","3")
+            const info = data.petInfo || {};
+            const pName = info.PetName || info["1"] || "未設定";
+            const pBreed = info.Breed || info["2"] || "--";
+            const pBirth = info["Birth Year"] || info["3"] || "--";
 
+            document.getElementById('p_Display_Name').innerText = "🐾 " + pName;
+            document.getElementById('p_Display_Breed').innerText = pBreed;
+            document.getElementById('p_Display_Birth').innerText = pBirth;
+            syncStatus.innerText = "已同步";
+
+            // 2. 歷史紀錄容錯
             const records = data.history || [];
-            if (records.length === 0) {
+            if (records.length === 0 || records[0] === null) {
                 listDiv.innerHTML = "📭 尚無就診紀錄"; return;
             }
 
             let allAllergies = new Set();
             records.forEach(item => {
-                const a = item.Allergy || item.Allergies || "";
-                if(a) a.split(/[,，、\s]+/).forEach(v => allAllergies.add(v.trim()));
-            });
-            document.getElementById('p_Display_Allergy').innerHTML = Array.from(allAllergies).map(a => `<span class="allergy-tag">${a}</span>`).join("") || "無";
+                if(!item) return;
+                // 嘗試抓取 Allergy 欄位
+                const a = item.Allergy || item["4"] || "";
+                if(a && a !== "null") a.toString().split(/[,，、\s]+/).forEach(v => allAllergies.add(v.trim()));
+                
+                // 渲染單條紀錄 (兼容 Key 與 索引)
+                const rDate = formatExcelDate(item.Date || item["2"]);
+                const rWeight = item.Weight || item["3"] || "--";
+                const rClinic = item.Clinic_Name || item["5"] || "未註明";
+                const rDiag = item.Diagnosis || item["6"] || "無紀錄";
+                const rAdvice = item.Doctor_Advice || item["7"] || "無醫囑";
 
-            records.forEach(item => {
                 listDiv.innerHTML += `
                     <div class="history-item">
-                        <div class="h-date">📅 ${formatExcelDate(item.Date)} (體重: ${item.Weight || '--'}kg)</div>
+                        <div class="h-date">📅 ${rDate} (體重: ${rWeight}kg)</div>
                         <div class="h-diag">
-                            <b>🏥 醫院：</b>${item.Clinic_Name || '未註明'}<br>
-                            <b>👨‍⚕️ 診斷：</b>${item.Diagnosis || '無紀錄'}<br>
-                            <b>💊 醫囑：</b>${item.Doctor_Advice || '無紀錄'}
+                            <b>🏥 醫院：</b>${rClinic}<br>
+                            <b>👨‍⚕️ 診斷：</b>${rDiag}<br>
+                            <b>💊 醫囑：</b>${rAdvice}
                         </div>
                     </div>
                 `;
             });
+            
+            const allergySpan = document.getElementById('p_Display_Allergy');
+            allergySpan.innerHTML = allAllergies.size > 0 
+                ? Array.from(allAllergies).map(a => `<span class="allergy-tag">${a}</span>`).join("") 
+                : "無";
+
         } catch (err) { 
-            console.error(err);
-            listDiv.innerHTML = "❌ 載入失敗"; 
+            console.error("Fetch Error:", err);
+            listDiv.innerHTML = "❌ 載入失敗，請確認 Webhook 網址與 ID"; 
         }
     }
     main();
